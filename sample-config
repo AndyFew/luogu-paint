@@ -1,0 +1,5 @@
+const int COOKIE_LEN = 1; // cookies 列表长度
+
+user cookies[COOKIE_LEN] = { // 保存用户 cookies
+	{"2333333333333333333333333333333333333333", 1}
+};
