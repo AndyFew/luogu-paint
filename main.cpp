@@ -1,3 +1,4 @@
+#include <iostream>
 #include <unistd.h>
 #include <cstdlib>
 #include <cstdio>
@@ -8,9 +9,9 @@
 /****************************** Definitions ******************************/
 
 #ifdef DEBUG
-#define debug(...) printf(__VA_ARGS__)
+#define debug(x) std::cout << x
 #else
-#define debug(...)
+#define debug(x)
 #endif
 
 // User Agent. 可自行更换.
@@ -20,10 +21,13 @@
 const int SIZE = 511;
 
 // 画板的长和宽.
-const int N = 400+10, M = 800+10;
+const int N = 800+10, M = 400+10;
 
 // loop 之间的 delay(s). 根据网速酌情更改.
-const int DELAY = 35; // 35s
+const int DELAY = 31; // 31s
+
+// paint 操作之间的 delay(s). 酌情修改.
+const int DELAY2 = 1; // 1s
 
 // 颜色数量, 不要更改.
 const int COLORS = 32;
@@ -79,7 +83,9 @@ inline void paint(const task& t, const user& id) {
 	static char buf[SIZE];
 	sprintf(buf, curl_paint_format, id.__client_id, id.uid, t.x, t.y, t.color);
 	system(buf);
-	debug("uid = %d painted (%d, %d) to %d.\n", id.uid, t.x, t.y, t.color);
+	debug("uid = " << id.uid << " painted (" << t.x << ", " << t.y << ") to " << t.color << ".\n");
+	system("cat tmp >> log");
+	system("echo >> log");
 }
 
 // 获得地图并更新差异列表
@@ -115,14 +121,6 @@ inline task getTask(std::queue<point>& tasks) {
 	return (task){X1 + x, Y1 + y, char2int(graph[x][y])};
 }
 
-inline void DBG_putMap(char map[N][M]) {
-	FILE *fp = fopen("./out", "w");
-	for (int i = 0; i < N; i++) {
-		fputs(map[i], fp);
-	}
-	fclose(fp);
-}
-
 // 初始化.
 inline void init() {
 	srand(time(0));
@@ -141,6 +139,7 @@ int main() {
 		getMap(map, tasks);
 		for (int i = 0; i < COOKIE_LEN; i++) {
 			paint(getTask(tasks), cookies[i]);
+			sleep(DELAY2);
 		}
 		sleep(DELAY);
 	}

@@ -1,5 +1,11 @@
-const int COOKIE_LEN = 1; // cookies 列表长度
+const int COOKIE_LEN = 3; // cookies 列表长度
 
 user cookies[COOKIE_LEN] = { // 保存用户 cookies
-	{"2333333333333333333333333333333333333333", 1}
+	{"0000000000000000000000000000000000000000", 0}, // 第一部分填 __client_id, 第二部分填 uid.
+};
+
+const int X1 = 0, Y1 = 0, X2 = 0, Y2 = 0; // 左上角和右下角的坐标.
+
+const char graph[X2 - X1 + 1][Y2 - Y1 + 2] = { // 具体图像. 注意行列是反的.
+	"g"
 };

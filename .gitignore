@@ -3,6 +3,7 @@ config*
 
 # Temporary files.
 tmp
+log
 main
 out
 
