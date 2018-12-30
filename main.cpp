@@ -84,15 +84,14 @@ inline void paint(const task& t, const user& id) {
 	sprintf(buf, curl_paint_format, id.__client_id, id.uid, t.x, t.y, t.color);
 	system(buf);
 	debug("uid = " << id.uid << " painted (" << t.x << ", " << t.y << ") to " << t.color << ".\n");
-	system("cat tmp >> log");
-	system("echo >> log");
+	// system("cat tmp >> log");
+	// system("echo >> log");
 }
 
 // 获得地图并更新差异列表
 inline void getMap(char map[N][M], std::queue<point>& tasks) {
 	system(curl_getboard_format);
 	rewind(tempFile);
-	while (!tasks.empty()) tasks.pop();
 	for (int i = 0; i < N; i++) {
 		fgets(map[i], M, tempFile);
 	}
@@ -142,5 +141,6 @@ int main() {
 			sleep(DELAY2);
 		}
 		sleep(DELAY);
+		while (!tasks.empty()) tasks.pop();
 	}
 }
