@@ -1,13 +1,16 @@
-# Config file that contains cookies.
+# Config files.
 config*
+.vscode/
 
 # Temporary files.
 tmp
 log
 out
-*.ppm
 main
 32colorize
 
-# VSCode config.
-.vscode/
+# Private files
+*.png
+*.jpg
+*.ppm
+*.jpeg
