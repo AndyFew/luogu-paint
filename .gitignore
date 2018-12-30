@@ -4,8 +4,10 @@ config*
 # Temporary files.
 tmp
 log
-main
 out
+*.ppm
+main
+32colorize
 
 # VSCode config.
 .vscode/
