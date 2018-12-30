@@ -1,11 +1,28 @@
-const int COOKIE_LEN = 3; // cookies 列表长度
+const int COOKIE_LEN = 1; // cookies 列表长度
 
 user cookies[COOKIE_LEN] = { // 保存用户 cookies
 	{"0000000000000000000000000000000000000000", 0}, // 第一部分填 __client_id, 第二部分填 uid.
 };
 
-const int X1 = 0, Y1 = 0, X2 = 0, Y2 = 0; // 左上角和右下角的坐标.
+const int REGION_CNT = 3; // 区域数量.
 
-const char graph[X2 - X1 + 1][Y2 - Y1 + 2] = { // 具体图像. 注意行列是反的.
-	"g"
+config regions[REGION_CNT] = {
+	{ // 优先级：主要
+		1, 1, 1, 1, // 分别为 X1, Y1, X2, Y2
+		{
+			"0"
+		}
+	},
+	{ // 优先级：次要
+		2, 2, 2, 2,
+		{
+			"1"
+		}
+	},
+	{ // 优先级：再次要
+		0, 0, 0, 0,
+		{
+			"1"
+		}
+	}
 };

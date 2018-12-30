@@ -14,6 +14,8 @@
 #define debug(x)
 #endif
 
+#define $ regions[id]
+
 // User Agent. 可自行更换.
 #define UA "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"
 
@@ -57,12 +59,18 @@ struct user {
 
 // 坐标.
 struct point {
-	int x, y;
+	int id, x, y;
 };
 
 // 任务.
 struct task {
 	int x, y, color;
+};
+
+// 配置.
+struct config {
+	int X1, Y1, X2, Y2;
+	char graph[N][M];
 };
 
 // 配置文件, 存储 cookies 相关. 格式参考 <sample-config>.
@@ -95,10 +103,13 @@ inline void getMap(char map[N][M], std::queue<point>& tasks) {
 	for (int i = 0; i < N; i++) {
 		fgets(map[i], M, tempFile);
 	}
-	for (int i = 0; i <= X2-X1; i++) {
-		for (int j = 0; j <= Y2-Y1; j++) {
-			if (map[X1 + i][Y1 + j] != graph[i][j]) {
-				tasks.push((point){i, j});
+	for (int id = 0; id < REGION_CNT; id++) {
+		for (int i = 0; i <= $.X2 - $.X1; i++) {
+			for (int j = 0; j <= $.Y2 - $.Y1; j++) {
+				if (map[$.X1 + i][$.Y1 + j]
+				 != $.graph[i][j]) {
+					tasks.push((point){id, i, j});
+				}
 			}
 		}
 	}
@@ -108,16 +119,21 @@ inline void getMap(char map[N][M], std::queue<point>& tasks) {
 inline task getTask(std::queue<point>& tasks) {
 	int x, y;
 	if (tasks.empty()) {
-		do {
+		while (1) {
 			x = rand() % N;
 			y = rand() % M;
-		} while (X1 <= x && x <= X2 && Y1 <= y && y <= Y2);
+			for (int id = 0; id < REGION_CNT; id++) {
+				if ($.X1 <= x && x <= $.X2 &&
+					$.Y1 <= y && y <= $.Y2) continue;
+			}
+		}
 		return (task){x, y, rand() % COLORS};
 	}
 	x = tasks.front().x;
 	y = tasks.front().y;
+	int id = tasks.front().id;
 	tasks.pop();
-	return (task){X1 + x, Y1 + y, char2int(graph[x][y])};
+	return (task){$.X1 + x, $.Y1 + y, char2int($.graph[x][y])};
 }
 
 // 初始化.
