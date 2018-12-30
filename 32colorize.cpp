@@ -42,36 +42,43 @@ RGB palette[32] = {
 
 // 使用方法.
 const char USAGE[] = {
-	"Usage: 32colorize [input] [output]\n"
+	"Usage: 32colorize [input] [output] [options]\n"
 	"Description:\n"
 	"  Reads an ASCII-format PPM image as input and 32-colorize it. Then writes an PPM image as output.\n"
-	"  WARNING: ONLY SUPPORT GIMP EXPORT FORMAT!"
+	"  WARNING: ONLY SUPPORT GIMP EXPORT FORMAT!\n"
+	"Options:\n"
+	"  -H --help       Display this help.\n"
+	"  -P --ppm        Export using ASCII PPM format (Default).\n"
+	"  -A --array      Export using 32-based char array format for config.\n"
 };
 
 // buffer 大小. 酌情修改.
 const int SIZE = 255;
+
+// 画布长宽, 酌情更改.
+const int N = 810, M = 410;
 
 // 两个颜色的切比雪夫距离
 int dist(const RGB& x, const RGB& y) {
 	return std::max({abs(x.R - y.R), abs(x.G - y.G), abs(x.B - y.B)});
 }
 
-// 逐行读文件的 buffer.
+// 读文件的 buffer.
 char buf[SIZE];
 RGB tmp;
 
-// 只有 GIMP 导出的 ppm 可以用这个程序!
-int main(int argc, char **argv) {
-	if (!strcmp(argv[1], "--help")) {
-		puts(USAGE);
-		return 0;
-	}
-	if (argc != 3) {
-		puts(USAGE);
-		return 1;
-	}
-	FILE *in = fopen(argv[1], "r");
-	FILE *out = fopen(argv[2], "w");
+// 文件指针
+FILE *in;
+FILE *out;
+
+// 数字转 32 进制字符
+char int2char(int x) {
+	if (x < 10) return x + '0';
+	return x - 10 + 'a'; 
+}
+
+// PPM 格式导出
+void exportPPM_() {
 	// 打个标记先
 	fputs("# 32-COLORIZED BY TIGER0132\n", out);
 	// 前四行复读
@@ -91,6 +98,77 @@ int main(int argc, char **argv) {
 		}
 		fprintf(out, "%d\n%d\n%d\n", palette[cand].R, palette[cand].G, palette[cand].B);
 	}
+}
+
+// 数组格式导出
+void exportArray_() {
+	int n, m, x = 0, y = 0; // 长宽和坐标
+	static char map[N][M] = {};
+	// 打个标记先
+	fputs("// 32-COLORIZED BY TIGER0132\n", out);
+	// 文件头处理一下
+	//   丢掉前两行
+	fgets(buf, SIZE, in);
+	fgets(buf, SIZE, in);
+	//   读一下长宽，最大像素值扔了
+	fscanf(in, "%d%d%*d", &n, &m);
+	while (!feof(in)) {
+		fscanf(in, "%d%d%d", &tmp.R, &tmp.G, &tmp.B);
+		// 颜色距离使用切比雪夫距离 (感觉用别的容易被毒瘤数据叉掉)
+		int cand = 0, dis = 0x3f3f3f3f;
+		for (int i = 0; i < 32; i++) {
+			if (dist(tmp, palette[i]) < dis) {
+				dis = dist(tmp, palette[i]);
+				cand = i;
+			}
+		}
+		// 丢到 buffer 里去
+		map[y][x] = int2char(cand);
+		y += ++x / n;
+		x %= n;
+	}
+	// 把结果塞到 output 里去
+	fputs("const char graph[X2 - X1 + 1][Y2 - Y1 + 2] = {\n", out);
+	for (int i = 0; i < m; i++) {
+		fputs("\t\"", out);
+		fputs(map[i], out);
+		fputs(i == m-1 ? "\"\n" : "\",\n", out);
+	}
+	fputs("};\n", out);
+}
+
+void displayHelp_(int retval) {
+	puts(USAGE);
+	exit(retval);
+}
+
+bool displayHelp; // --help
+// bool exportPPM; // -P
+bool exportArray; // -M
+bool error; // 不可识别的 option
+
+// 输入输出文件名
+char inPath[SIZE], outPath[SIZE];
+
+// 只有 GIMP 导出的 ppm 可以用这个程序!
+int main(int argc, char **argv) {
+	if (argc < 3) error = true;
+	// 解析命令行参数
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-H")) displayHelp = true;
+		else if (!strcmp(argv[i], "--ppm") || !strcmp(argv[i], "-P")) ;//exportPPM = true;
+		else if (!strcmp(argv[i], "--array") || !strcmp(argv[i], "-A")) exportArray = true;
+		else if (*(argv[i]) == '-') error = true;
+		else if (!*inPath) strcpy(inPath, argv[i]);
+		else strcpy(outPath, argv[i]);
+	}
+	// 出错或 --help 或输入 / 出文件缺失
+	if (error || displayHelp || !*inPath || !*outPath) displayHelp_(error);
+	// 开文件
+	in = fopen(inPath, "r");
+	out = fopen(outPath, "w");
+	if (!exportArray) exportPPM_(); // -P
+	if (exportArray) exportArray_(); // -M
 	fclose(in);
 	fclose(out);
 }
