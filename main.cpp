@@ -1,18 +1,18 @@
 #include <iostream>
 #include <unistd.h>
+#include <cstring>
 #include <cstdlib>
 #include <cstdio>
+#include <cwchar>
 #include <cctype>
 #include <ctime>
 #include <queue>
 
-/****************************** Definitions ******************************/
-
-#ifdef DEBUG
-#define debug(x) std::cout << x
-#else
-#define debug(x)
+#ifndef __linux__
+#error Unsupported operating system. Please use Linux.
 #endif
+
+/****************************** Definitions ******************************/
 
 #define $ regions[id]
 
@@ -51,6 +51,16 @@ const char curl_getboard_format[] =
 	"-o tmp 1> /dev/null 2>&1"
 ;
 
+// paint POST 请求的格式串
+const char scanf_paint_format[] = "{\"status\":%d,\"data\":%s}";
+
+#define LGREEN "\033[1;32m"
+#define LRED "\033[1;31m"
+#define RESET "\033[0m"
+
+#define GREEN(x) LGREEN x RESET
+#define RED(x) LRED x RESET
+
 // 用户结构体.
 struct user {
 	char __client_id[41];
@@ -76,24 +86,73 @@ struct config {
 // 配置文件, 存储 cookies 相关. 格式参考 <sample-config>.
 #include "config"
 
-/****************************** Functions ******************************/
+/****************************** Utils ******************************/
 
-FILE *tempFile;
-
-// 32 进制字符转数字.
+// 36 进制字符转数字.
 inline int char2int(char ch) {
 	if (isdigit(ch)) return ch - '0';
 	return ch - 'a' + 10;
 }
+
+// 反转义字符串. 如 "\u5b57\u7b26\u6d4b\u8bd5123abc" => "字符测试123abc".
+inline int unescape(char *dest, const char *src, size_t sz) {
+	wchar_t buf[SIZE] = {};
+	int n = strlen(src), m = 0;
+	for (int i = 0; i < n; i++) {
+		if (src[i] == '\\') {
+			switch (src[i+1]) {
+				case 'n': buf[m++] = '\n'; break;
+				case 't': buf[m++] = '\t'; break;
+				case '\\': buf[m++] = '\\'; break;
+				case 'x':
+					if (i + 3 >= n) return 1;
+					buf[m++] = (char2int(src[i+2]) << 4)
+							  | char2int(src[i+3]);
+					i += 2;
+					break;
+				case 'u':
+					if (i + 5 >= n) return 1;
+					buf[m++] = (((((char2int(src[i+2]) << 4)
+								  | char2int(src[i+3])) << 4)
+								  | char2int(src[i+4])) << 4)
+								  | char2int(src[i+5]);
+					i += 4;
+					break;
+				default: return 1;
+			}
+			i++;
+		} else {
+			buf[m++] += src[i];
+		}
+	}
+	wcstombs(dest, buf, sz);
+	return 0;
+}
+
+/****************************** Functions ******************************/
+
+FILE *tempFile;
 
 // 让用户 "id" 在画板的 (x, y) 处画上 "color" 色的点.
 inline void paint(const task& t, const user& id) {
 	static char buf[SIZE];
 	sprintf(buf, curl_paint_format, id.__client_id, id.uid, t.x, t.y, t.color);
 	system(buf);
-	debug("uid = " << id.uid << " painted (" << t.x << ", " << t.y << ") to " << t.color << ".\n");
-	// system("cat tmp >> log");
-	// system("echo >> log");
+}
+
+// 画完点后的 log.
+inline void paintLog(const task& t, const user& id) {
+	rewind(tempFile);
+	int status;
+	static char buf[SIZE];
+	fscanf(tempFile, scanf_paint_format, &status, buf);
+	if (status == 200) {
+		printf(GREEN("✔ | (U%d) painted (%d, %d) -> %d\n"), id.uid, t.x, t.y, t.color);
+	} else {
+		unescape(buf, buf, SIZE-1);
+		buf[strlen(buf)-1] = 0;
+		printf(RED  ("✘ | (U%d) got an error when painting (%d, %d): %s\n"), id.uid, t.x, t.y, buf);
+	}
 }
 
 // 获得地图并更新差异列表
@@ -126,6 +185,7 @@ inline task getTask(std::queue<point>& tasks) {
 				if ($.X1 <= x && x <= $.X2 &&
 					$.Y1 <= y && y <= $.Y2) continue;
 			}
+			break;
 		}
 		return (task){x, y, rand() % COLORS};
 	}
@@ -139,6 +199,7 @@ inline task getTask(std::queue<point>& tasks) {
 // 初始化.
 inline void init() {
 	srand(time(0));
+	setlocale(LC_ALL,"en_US.UTF-8");
 	tempFile = fopen("./tmp", "rw");
 }
 
@@ -154,6 +215,7 @@ int main() {
 		getMap(map, tasks);
 		for (int i = 0; i < COOKIE_LEN; i++) {
 			paint(getTask(tasks), cookies[i]);
+			paintLog(getTask(tasks), cookies[i]);
 			sleep(DELAY2);
 		}
 		sleep(DELAY);
